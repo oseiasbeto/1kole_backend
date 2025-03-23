@@ -48,23 +48,5 @@ kool.methods.incrementViews = async function () {
   await this.save(); // Salva o Kool atualizado
 };
 
-
-// Middleware para remover mídias do Cloudinary ao excluir um kool
-kool.pre("deleteOne", { document: true, query: false }, async function (next) {
-  const cloudinary = require("../config/cloudinary"); // Importa a configuração do Cloudinary
-
-  if (this.media && this.media.length > 0) {
-    for (const file of this.media) {
-      if (file.public_id) {
-        await cloudinary.uploader.destroy(file.public_id);
-        // Exclui a mídia do Cloudinary utilizando o public_id armazenado no banco de dados
-      }
-    }
-  }
-
-  next(); // Prossegue com a exclusão do kool
-});
-
-
 // Exporta o modelo do kool para ser utilizado no código
 module.exports = mongoose.model("Kool", kool);
