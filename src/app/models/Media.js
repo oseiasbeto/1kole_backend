@@ -10,6 +10,7 @@ const mediaSchema = new mongoose.Schema(
     width: { type: Number, required: false }, // Largura da imagem/vídeo (opcional)
     height: { type: Number, required: false }, // Altura da imagem/vídeo (opcional)
     thumbnail: { type: String, default: null }, // Altura da imagem/vídeo (opcional)
+    duration: { type: String, default: null }, // Altura da imagem/vídeo (opcional)
     createdAt: { type: Date, default: Date.now }, // Data de criação
   },
   { timestamps: true }

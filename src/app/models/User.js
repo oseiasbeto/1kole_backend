@@ -40,6 +40,7 @@ const user = new mongoose.Schema(
             low: { type: String, default: null },
             high: { type: String, default: null },
             medium: { type: String, default: null },
+            url: { type: String, default: null }
         },
         coverPhoto: {
             public_id: { type: String, default: null },

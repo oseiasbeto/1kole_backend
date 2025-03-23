@@ -67,8 +67,7 @@ const createKool = async (req, res) => {
             let notificationMessage =
               usersList.length === 1
                 ? `${usersListNames[0]} fez um ReKool no seu Kool!`
-                : `${usersListNames.slice(0, 2).join(", ")}${usersList.length > 2 ? ` e mais ${usersList.length - 2} pessoas fizeram ReKool` : " fizeram ReKool"
-                } no seu Kool!`;
+                : `${usersListNames.slice(0, 2).join(", ")}${usersList.length > 2 ? ` e mais ${usersList.length - 2} pessoas fizeram ReKool` : " fizeram ReKool"} no seu Kool!`;
             await Notification.updateOne(
               { _id: existingReKoolNotification._id },
               { $set: { message: notificationMessage }, $addToSet: { relatedUsers: userId } }
@@ -117,8 +116,7 @@ const createKool = async (req, res) => {
             let notificationMessage =
               usersList.length === 1
                 ? `${usersListNames[0]} respondeu ao seu Kool!`
-                : `${usersListNames.slice(0, 2).join(", ")}${usersList.length > 2 ? ` e mais ${usersList.length - 2} pessoas responderam` : " responderam"
-                } ao seu Kool!`;
+                : `${usersListNames.slice(0, 2).join(", ")}${usersList.length > 2 ? ` e mais ${usersList.length - 2} pessoas responderam` : " responderam"} ao seu Kool!`;
             await Notification.updateOne(
               { _id: existingReplyNotification._id },
               { $set: { message: notificationMessage }, $addToSet: { relatedUsers: userId } }
@@ -142,7 +140,7 @@ const createKool = async (req, res) => {
       }
     }
 
-    // Upload de mídias (ajustado para vídeos com HLS e thumbnail)
+    // Upload de mídias (ajustado para incluir duration)
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
         const buffer = file.buffer;
@@ -153,14 +151,14 @@ const createKool = async (req, res) => {
         const isVideo = file.mimetype.startsWith("video/");
         const uploadOptions = isVideo
           ? {
-            resource_type: "video",
-            folder: "videos",
-            eager: [{ format: "m3u8", streaming_profile: "hd" }],
-          }
+              resource_type: "video",
+              folder: "videos",
+              eager: [{ format: "m3u8", streaming_profile: "hd" }], // Gera HLS
+            }
           : {
-            resource_type: "image",
-            folder: "uploads_1koole",
-          };
+              resource_type: "image",
+              folder: "uploads_1koole",
+            };
 
         const uploadedMedia = await new Promise((resolve, reject) => {
           const uploadStream = cloudinary.uploader.upload_stream(uploadOptions, (error, result) => {
@@ -178,18 +176,21 @@ const createKool = async (req, res) => {
             throw new Error("Falha ao processar o vídeo em HLS.");
           }
 
-          // Gerando a URL da thumbnail com dimensões proporcionais ao vídeo original
+          // Gerando a URL da thumbnail
           const thumbnailUrl = cloudinary.url(uploadedMedia.public_id, {
             resource_type: "video",
             transformation: [
-              { width: uploadedMedia.width, crop: "scale" }, // Usa a largura original, ajusta altura automaticamente
-              { quality: "80" }, // Qualidade fixa
-              { fetch_format: "auto" }, // JPEG ou WebP
-              { dpr: "auto" }, // Densidade de pixels automática
-              { start_offset: "1" }, // Frame em 1 segundo
+              { width: uploadedMedia.width, crop: "scale" },
+              { quality: "80" },
+              { fetch_format: "auto" },
+              { dpr: "auto" },
+              { start_offset: "1" },
             ],
-            secure: true, // HTTPS
+            secure: true,
           });
+
+          // Extraindo a duração do resultado do Cloudinary
+          const duration = uploadedMedia.duration; // Em segundos (ex.: 120.5)
 
           mediaDoc = new Media({
             author: userId,
@@ -199,7 +200,8 @@ const createKool = async (req, res) => {
             size: uploadedMedia.bytes || file.size,
             width: uploadedMedia.width,
             height: uploadedMedia.height,
-            thumbnail: thumbnailUrl, // Adicionando a thumbnail
+            thumbnail: thumbnailUrl,
+            duration: duration, // Adicionando a duração
           });
         } else {
           mediaDoc = new Media({
