@@ -16,6 +16,7 @@ app.use(express.json({ limit: '100mb' })); // Aumenta o limite para JSON
 app.use(express.urlencoded({ limit: '100mb', extended: true }));
 app.use("/files", express.static(path.resolve(__dirname, "..", "uploads"))); // Serve arquivos estáticos da pasta "uploads" através da rota "/files"
 
+
 // Importando as rotas do aplicativo
 const users = require("./use-cases/users/users.routes"); // Importa as rotas de usuários
 const kools = require("./use-cases/kools/kools.routes"); // Importa as rotas de kools (posts)
