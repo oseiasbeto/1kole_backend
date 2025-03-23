@@ -29,7 +29,7 @@ const protectedRoute = (req, res, next) => {
     // Verifica a validade do token
     jwt.verify(token, process.env.JWT_ACCESS_TOKEN_SECRET, (err, decoded) => {
         if (err) {
-            return res.status(401).json({ message: "Token inválido." });
+            return res.status(401).json({ message: "Token inválido a chave incorreta." });
         }
 
         req.user = decoded; // Adiciona os dados do usuário decodificado ao objeto da requisição
