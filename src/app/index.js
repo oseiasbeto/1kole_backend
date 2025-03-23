@@ -9,26 +9,19 @@ const app = express(); // Instância do Express
 const connectDB = require('./config/connectDb'); // Função para conectar ao banco de dados
 connectDB(); // Estabelece a conexão com o banco de dados
 
-const corsOptions = {
-    origin: ["https://www.1kole.com", "https://1kole.com"], // Lista de domínios permitidos
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
-};
-
-app.use(cors(corsOptions));
-app.use(express.json({ limit: '100mb' })); // Aumenta o limite para JSON
-app.use(express.urlencoded({ limit: '100mb', extended: true }));
+// Configurando os middlewares
+app.use(cors()); // Habilita o CORS para que o servidor aceite requisições de outros domínios
+// Middleware para permitir uploads grandes
+app.use(express.json()); // Aumenta o limite para JSON
 app.use("/files", express.static(path.resolve(__dirname, "..", "uploads"))); // Serve arquivos estáticos da pasta "uploads" através da rota "/files"
-
 
 // Importando as rotas do aplicativo
 const users = require("./use-cases/users/users.routes"); // Importa as rotas de usuários
 const kools = require("./use-cases/kools/kools.routes"); // Importa as rotas de kools (posts)
-const notifications = require("./use-cases/notifications/notifications.routes");
+const notifications = require("./use-cases/notifications/notifications.routes"); 
 
 // Usando as rotas no aplicativo
-app.use("/v1/users", users);
+app.use("/v1/users", users); 
 app.use("/v1/kools", kools);
 app.use("/v1/notifications", notifications);
 
