@@ -39,7 +39,7 @@ const refreshToken = async (req, res) => {
                 const iv = session.crypto.iv // Obtém o IV (vetor de inicialização) da sessão
 
                 const encryptedRefreshToken = session.token // Obtém o token de atualização criptografado da sessão
-                const secreetRefreshTokenKey = process.env.JWT_REFRESH_TOKEN_SECREET // Obtém a chave secreta do refresh token do ambiente
+                const secreetRefreshTokenKey = process.env.JWT_REFRESH_TOKEN_SECRET // Obtém a chave secreta do refresh token do ambiente
 
                 // Descriptografa o refresh token armazenado na sessão
                 const decryptToken = decryptRefreshToken({

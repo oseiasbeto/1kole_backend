@@ -11,7 +11,7 @@ const { sign } = require("jsonwebtoken");
  */
 const generateRefreshToken = (user, expiresIn) => {
     // Obtém a chave secreta do arquivo de variáveis de ambiente (normalmente configurada no arquivo .env)
-    const secreetKey = process.env.JWT_REFRESH_TOKEN_SECREET;
+    const secreetKey = process.env.JWT_REFRESH_TOKEN_SECRET;
 
     // Cria o token de atualização usando a função 'sign' do 'jsonwebtoken'
     // Passa o payload (dados do usuário), a chave secreta e o tempo de expiração do token
