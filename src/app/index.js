@@ -11,7 +11,7 @@ connectDB(); // Estabelece a conexão com o banco de dados
 
 // Configurando os middlewares
 app.use(cors());
-app.use(express.json());
+app.use(express.json())
 app.use("/files", express.static(path.resolve(__dirname, "..", "uploads"))); // Serve arquivos estáticos da pasta "uploads" através da rota "/files"
 
 // Importando as rotas do aplicativo
