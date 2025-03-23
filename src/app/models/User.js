@@ -1,142 +1,176 @@
-// Importando o Mongoose para trabalhar com o MongoDB
 const mongoose = require("mongoose");
 
-// Definindo o esquema para o usuário (user)
 const user = new mongoose.Schema(
     {
-        // Nome de usuário, único, com limite mínimo e máximo de caracteres
         username: {
-            type: String,  // Tipo de dado: String
-            required: [true, "O nome de usuário é obrigatório."], // Campo obrigatório
-            unique: true,   // Nome de usuário único
-            minlength: [3, "O nome de usuário deve ter no mínimo 3 caracteres."], // Limite mínimo de caracteres
-            maxlength: [30, "O nome de usuário deve ter no máximo 30 caracteres."], // Limite máximo de caracteres
+            type: String,
+            required: [true, "O nome de usuário é obrigatório."],
+            unique: true,
+            minlength: [3, "O nome de usuário deve ter no mínimo 3 caracteres."],
+            maxlength: [30, "O nome de usuário deve ter no máximo 30 caracteres."],
         },
-        // Propriedade que indica se o usuário foi verificado (por email, por exemplo)
         verified: {
-            type: Boolean,   // Tipo de dado: Booleano
-            default: false,  // Valor padrão: falso (não verificado)
+            type: Boolean,
+            default: false,
         },
-        // Nome curto do usuário, usado para exibição na interface
         name: {
-            type: String,    // Tipo de dado: String
-            required: [true, "O nome é obrigatório."],  // Campo obrigatório
-            maxlength: [50, "O nome pode ter no máximo 50 caracteres."],  // Limite máximo de caracteres
+            type: String,
+            required: [true, "O nome é obrigatório."],
+            maxlength: [50, "O nome pode ter no máximo 50 caracteres."],
         },
-        // E-mail do usuário, com validação de formato
         email: {
-            type: String,           // Tipo de dado: String
-            required: [true, "O e-mail é obrigatório."],         // Campo obrigatório
-            unique: true,           // E-mail único
-            match: [/^\S+@\S+\.\S+$/, "Por favor, insira um endereço de e-mail válido."], // Validação de formato de e-mail
+            type: String,
+            required: [
+                function() {
+                    return !this.googleId && !this.facebookId;
+                },
+                "O e-mail é obrigatório para usuários que não usam redes sociais."
+            ],
+            unique: true,
+            match: [/^\S+@\S+\.\S+$/, "Por favor, insira um endereço de e-mail válido."],
         },
-        // Senha do usuário, com tamanho mínimo de 6 caracteres
         password: {
-            type: String,    // Tipo de dado: String
-            required: [true, "A senha é obrigatória."],  // Campo obrigatório
-            minlength: [6, "A senha deve ter no mínimo 6 caracteres."],    // Tamanho mínimo: 6 caracteres
+            type: String,
+            required: [true, "A senha é obrigatória."],
+            minlength: [6, "A senha deve ter no mínimo 6 caracteres."],
         },
-        // Imagem do perfil do usuário, com um valor padrão
         profileImage: {
             public_id: { type: String, default: null },
-            url: { type: String, default: 'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png' },
+            original: { type: String, default: 'https://abs.twimg.com/sticky/default_profile_images/default_profile_400x400.png' },
+            low: { type: String, default: null },
+            high: { type: String, default: null },
+            medium: { type: String, default: null },
         },
         coverPhoto: {
             public_id: { type: String, default: null },
-            url: { type: String, default: null },
+            original: { type: String, default: null },
+            low: { type: String, default: null },
+            high: { type: String, default: null },
+            medium: { type: String, default: null },
         },
-        // Bio do usuário, com limite de 160 caracteres
         bio: {
-            type: String,    // Tipo de dado: String
-            maxlength: [160, "A bio pode ter no máximo 160 caracteres."],  // Limite de caracteres
-            default: "",     // Valor padrão (bio vazia)
+            type: String,
+            maxlength: [160, "A bio pode ter no máximo 160 caracteres."],
+            default: "",
         },
-        // Lista de seguidores do usuário (referências a outros documentos de usuários)
-        followers: [
-            {
-                type: mongoose.Schema.Types.ObjectId, // Tipo de dado: ObjectId (referência a outro usuário)
-                ref: "User", // Refere-se ao modelo "User"
-            },
-        ],
-        // Lista de usuários que o usuário está seguindo (referências a outros documentos de usuários)
-        following: [
-            {
-                type: mongoose.Schema.Types.ObjectId, // Tipo de dado: ObjectId (referência a outro usuário)
-                ref: "User", // Refere-se ao modelo "User"
-            },
-        ],
-        // ID do usuário associado ao Google (caso o login seja via Google)
+        followers: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+        }],
+        following: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+        }],
         googleId: {
-            type: String,    // Tipo de dado: String
-            default: null
+            type: String,
+            default: null,
         },
-        // ID do usuário associado ao Facebook (caso o login seja via Facebook)
         facebookId: {
-            type: String,    // Tipo de dado: String
-            default: null
+            type: String,
+            default: null,
         },
-        // Contagem de "Kools" (posts ou ações do usuário, exemplo)
         koolsCount: {
-            type: Number,   // Tipo de dado: Número
-            default: 0,     // Valor padrão: 0 (nenhum Kool ainda)
+            type: Number,
+            default: 0,
         },
-        // Armazena a quantidade total de notificações não lidas pelo usuário
         unreadNotificationsCount: {
-            type: Number,   // Tipo de dado: Número
-            default: 0,     // Começa com 0, pois inicialmente não há notificações pendentes
+            type: Number,
+            default: 0,
         },
-        // Armazena a quantidade de mensagens diretas não lidas pelo usuário
         unreadMessagesCount: {
-            type: Number,   // Tipo de dado: Número
-            default: 0,     // Começa com 0, pois inicialmente não há mensagens pendentes
+            type: Number,
+            default: 0,
         },
-        // Número de telefone do usuário, com validação de formato
         phoneNumber: {
-            type: String,    // Tipo de dado: String
-            match: [/^\+?[1-9]\d{1,14}$/, "Por favor, insira um número de telefone válido."], // Validação de formato de número
-            default: ""
+            type: String,
+            match: [/^\+?[1-9]\d{1,14}$/, "Por favor, insira um número de telefone válido."],
+            default: "",
         },
-        // Token para verificar a conta, se solicitado pelo usuário
         verificationToken: {
-            type: String,    // Tipo de dado: String
-            required: false, // Não obrigatório
+            type: String,
+            required: false,
         },
-        // Data de expiração do token de verificacao de conta
         verificationTokenExpires: {
-            type: Date,      // Tipo de dado: Date
-            required: false, // Não obrigatório
+            type: Date,
+            required: false,
         },
         resetPasswordToken: {
-            type: String,    // Tipo de dado: String
-            default: null
+            type: String,
+            default: null,
         },
-        // Data de expiração do token de redefinição de senha
         resetPasswordExpires: {
-            type: Date,      // Tipo de dado: Date
-            default: null
+            type: Date,
+            default: null,
         },
-        // Status do usuário, podendo ser "active" ou "inactive"
         status: {
-            type: String,            // Tipo de dado: String
-            enum: ["active", "inactive"], // Valores possíveis: "active" ou "inactive"
-            default: "inactive",     // Valor padrão: "inactive" (usuário inativo até ser verificado)
+            type: String,
+            enum: ["active", "inactive"],
+            default: "inactive",
         },
-        // Data de nascimento do usuário
         birthDate: {
-            type: Date,    // Tipo de dado: Date
-            required: false, // Não obrigatório
+            type: Date,
+            required: false,
         },
-        // Data de nascimento do usuário
         website: {
-            type: String,    // Tipo de dado: Date
-            default: ""
+            type: String,
+            default: "",
+        },
+        gender: {
+            type: String,
+            enum: ["male", "female", "other", "prefer_not_to_say"],
+            default: "prefer_not_to_say",
+        },
+        location: {
+            city: { type: String, default: "" },
+            state: { type: String, default: "" },
+            country: { type: String, default: "" },
+        },
+        interests: [{
+            type: String,
+        }],
+        relationshipStatus: {
+            type: String,
+            enum: ["single", "in_a_relationship", "married", "divorced", "complicated"],
+            default: "single",
+        },
+        privacySettings: {
+            profileVisibility: { type: String, enum: ["public", "friends_only", "private"], default: "public" },
+            messagePrivacy: { type: String, enum: ["public", "friends_only", "private"], default: "friends_only" },
+        },
+        blockedUsers: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+        }],
+        activityHistory: [{
+            type: mongoose.Schema.Types.Mixed,
+        }],
+        notificationSettings: {
+            emailNotifications: { type: Boolean, default: true },
+            pushNotifications: { type: Boolean, default: true },
+        },
+        loginHistory: [{
+            timestamp: { type: Date, default: Date.now },
+            ipAddress: { type: String },
+            device: { type: String },
+        }],
+        accountVerificationStatus: {
+            type: String,
+            enum: ["pending", "verified", "rejected"],
+            default: "pending",
+        },
+        preferredLanguage: {
+            type: String,
+            default: "en",
+        },
+        themeSettings: {
+            type: String,
+            enum: ["light", "dark"],
+            default: "light",
         },
     },
-    { timestamps: true } // Adiciona campos de "createdAt" e "updatedAt" automaticamente
+    { timestamps: true }
 );
 
-// Criando um índice para melhorar a performance nas buscas por username, email e phoneNumber
 user.index({ username: 1, email: 1 });
 
-// Exportando o modelo "User" baseado no esquema "user"
 module.exports = mongoose.model("User", user);
