@@ -3,14 +3,11 @@ const User = require("../../../models/User");
 const Media = require("../../../models/Media");
 const Notification = require("../../../models/Notification");
 const userTransformer = require("../../../utils/userTransformer");
-const cloudinary = require("../../../config/cloudinary");
-const streamifier = require("streamifier");
 
 const createKool = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { content, parentKool, isReKool } = req.body;
-    let media = [];
+    const { content, parentKool, isReKool, media } = req.body; // Media agora vem como array de objetos do frontend
     let notificationOccurred = false;
 
     const user = await User.findById(userId);
@@ -20,207 +17,52 @@ const createKool = async (req, res) => {
 
     let originalKool = parentKool ? await Kool.findOne({ _id: parentKool }) : null;
 
-    // Lógica para ReKool (mantida como está)
-    if (isReKool) {
-      if (!parentKool) {
-        return res.status(400).json({ message: "O ReKool deve referenciar um Kool original" });
-      }
-      if (!originalKool) {
-        return res.status(404).json({ message: "Kool original não encontrado" });
-      }
-
-      const existingReKool = await Kool.findOne({
-        parentKool,
-        author: userId,
-        isReKool: true,
-      });
-
-      if (existingReKool) {
-        await existingReKool.deleteOne();
-        await originalKool.updateOne({ $pull: { reKools: userId } });
-        return res.status(200).json({ message: "ReKool removido com sucesso!" });
-      }
-
-      const reKool = new Kool({
-        author: userId,
-        parentKool,
-        isReKool: true,
-      });
-      await reKool.save();
-      await originalKool.updateOne({ $addToSet: { reKools: userId } });
-
-      const existingReKoolNotification = await Notification.findOne({
-        user: originalKool.author,
-        type: "rekool",
-        relatedKool: originalKool._id,
-        relatedUsers: { $nin: [userId] },
-        isRead: false,
-      });
-
-      if (existingReKoolNotification) {
-        let usersList = await User.find({ _id: { $in: existingReKoolNotification.relatedUsers } });
-        if (!usersList.some((u) => u._id.toString() === userId)) {
-          const newUser = await User.findById(userId);
-          if (newUser && newUser._id.toString() !== originalKool.author.toString()) {
-            usersList.push(newUser);
-            const usersListNames = usersList.map((u) => u.name);
-            let notificationMessage =
-              usersList.length === 1
-                ? `${usersListNames[0]} fez um ReKool no seu Kool!`
-                : `${usersListNames.slice(0, 2).join(", ")}${usersList.length > 2 ? ` e mais ${usersList.length - 2} pessoas fizeram ReKool` : " fizeram ReKool"} no seu Kool!`;
-            await Notification.updateOne(
-              { _id: existingReKoolNotification._id },
-              { $set: { message: notificationMessage }, $addToSet: { relatedUsers: userId } }
-            );
-          }
-        }
-      } else if (originalKool.author.toString() !== userId) {
-        const user = await User.findById(userId);
-        if (user) {
-          const notification = new Notification({
-            user: originalKool.author,
-            type: "rekool",
-            message: `${user.name} fez um ReKool do seu Kool!`,
-            relatedUsers: [userId],
-            relatedKool: originalKool._id,
+    // Processamento de mídia enviada pelo frontend
+    let mediaDocs = [];
+    if (media && Array.isArray(media) && media.length > 0) {
+      for (const mediaItem of media) {
+        // Verificar se é um objeto válido
+        if (!mediaItem.public_id || !mediaItem.url || !mediaItem.type) {
+          return res.status(400).json({
+            success: false,
+            error: 'Dados de mídia inválidos'
           });
-          await notification.save();
-          await User.updateOne({ _id: originalKool.author }, { $inc: { rekoolsCount: 1 } });
-          notificationOccurred = true;
         }
-      }
 
-      return res.status(201).json({ message: "ReKool realizado com sucesso", kool: reKool, notificationOccurred });
-    }
-
-    // Lógica para Reply (mantida como está)
-    if (parentKool) {
-      if (!originalKool) {
-        return res.status(404).json({ message: "Kool original não encontrado" });
-      }
-
-      const existingReplyNotification = await Notification.findOne({
-        user: originalKool.author,
-        type: "reply",
-        relatedKool: originalKool._id,
-        isRead: false,
-      });
-
-      if (existingReplyNotification) {
-        let usersList = await User.find({ _id: { $in: existingReplyNotification.relatedUsers } });
-        if (!usersList.some((u) => u._id.toString() === userId)) {
-          const newUser = await User.findById(userId);
-          if (newUser && newUser._id.toString() !== originalKool.author.toString()) {
-            usersList.push(newUser);
-            const usersListNames = usersList.map((u) => u.name);
-            let notificationMessage =
-              usersList.length === 1
-                ? `${usersListNames[0]} respondeu ao seu Kool!`
-                : `${usersListNames.slice(0, 2).join(", ")}${usersList.length > 2 ? ` e mais ${usersList.length - 2} pessoas responderam` : " responderam"} ao seu Kool!`;
-            await Notification.updateOne(
-              { _id: existingReplyNotification._id },
-              { $set: { message: notificationMessage }, $addToSet: { relatedUsers: userId } }
-            );
-          }
-        }
-      } else if (originalKool.author.toString() !== userId) {
-        const user = await User.findById(userId);
-        if (user) {
-          const notification = new Notification({
-            user: originalKool.author,
-            type: "reply",
-            message: `${user.name} respondeu ao seu Kool!`,
-            relatedUsers: [userId],
-            relatedKool: originalKool._id,
+        // Para vídeos, exigir duração
+        if (mediaItem.type === 'video' && !mediaItem.duration) {
+          return res.status(400).json({
+            success: false,
+            error: 'Vídeos devem incluir a duração'
           });
-          await notification.save();
-          await User.updateOne({ _id: originalKool.author }, { $inc: { unreadNotificationsCount: 1 } });
-          notificationOccurred = true;
-        }
-      }
-    }
-
-    // Upload de mídias (ajustado para incluir duration)
-    if (req.files && req.files.length > 0) {
-      for (const file of req.files) {
-        const buffer = file.buffer;
-        if (!buffer) {
-          return res.status(400).json({ message: "Nenhum arquivo válido foi enviado." });
         }
 
-        const isVideo = file.mimetype.startsWith("video/");
-        const uploadOptions = isVideo
-          ? {
-              resource_type: "video",
-              folder: "videos",
-              eager: [{ format: "m3u8", streaming_profile: "hd" }], // Gera HLS
+        const mediaDoc = await Media.findOneAndUpdate(
+          { public_id: mediaItem.public_id },
+          {
+            $setOnInsert: { // Só cria se não existir
+              public_id: mediaItem.public_id,
+              url: mediaItem.url,
+              type: mediaItem.type,
+              format: mediaItem.format,
+              thumbnail: mediaItem.thumbnail || undefined, // Opcional
+              width: mediaItem.width || undefined, // Opcional
+              height: mediaItem.height || undefined, // Opcional
+              duration: mediaItem.duration || undefined, // Obrigatório para vídeos
+              author: userId // Usando "author" em vez de "uploaded_by" para manter consistência com o modelo original
             }
-          : {
-              resource_type: "image",
-              folder: "uploads_1koole",
-            };
-
-        const uploadedMedia = await new Promise((resolve, reject) => {
-          const uploadStream = cloudinary.uploader.upload_stream(uploadOptions, (error, result) => {
-            if (error) return reject(error);
-            resolve(result);
-          });
-          streamifier.createReadStream(buffer).pipe(uploadStream);
-        });
-
-        let mediaDoc;
-        if (isVideo) {
-          // Pegando a URL HLS
-          const hlsUrl = uploadedMedia.eager?.[0]?.secure_url;
-          if (!hlsUrl) {
-            throw new Error("Falha ao processar o vídeo em HLS.");
+          },
+          { 
+            upsert: true,
+            new: true 
           }
+        );
 
-          // Gerando a URL da thumbnail
-          const thumbnailUrl = cloudinary.url(uploadedMedia.public_id, {
-            resource_type: "video",
-            transformation: [
-              { width: uploadedMedia.width, crop: "scale" },
-              { quality: "80" },
-              { fetch_format: "auto" },
-              { dpr: "auto" },
-              { start_offset: "1" },
-            ],
-            secure: true,
-          });
-
-          // Extraindo a duração do resultado do Cloudinary
-          const duration = uploadedMedia.duration; // Em segundos (ex.: 120.5)
-
-          mediaDoc = new Media({
-            author: userId,
-            url: hlsUrl, // URL HLS para o vídeo
-            public_id: uploadedMedia.public_id,
-            type: "video",
-            size: uploadedMedia.bytes || file.size,
-            width: uploadedMedia.width,
-            height: uploadedMedia.height,
-            thumbnail: thumbnailUrl,
-            duration: duration, // Adicionando a duração
-          });
-        } else {
-          mediaDoc = new Media({
-            author: userId,
-            url: uploadedMedia.secure_url,
-            public_id: uploadedMedia.public_id,
-            type: "image",
-            size: uploadedMedia.bytes || file.size,
-            width: uploadedMedia.width,
-            height: uploadedMedia.height,
-          });
-        }
-
-        await mediaDoc.save();
-        media.push(mediaDoc);
+        mediaDocs.push(mediaDoc._id);
       }
     }
 
-    if (!content && (!req.files || req.files.length === 0)) {
+    if (!content && mediaDocs.length === 0) {
       return res.status(400).json({ message: "O Kool deve ter texto ou mídia" });
     }
 
@@ -248,7 +90,7 @@ const createKool = async (req, res) => {
     const newKool = new Kool({
       author: user._id,
       content,
-      media: media.length > 0 ? media.map((m) => m._id) : undefined,
+      media: mediaDocs.length > 0 ? mediaDocs : undefined,
       isReply: parentKool && !isReKool,
       parentKool: parentKool || undefined,
       tags: parentKool ? [] : tags,
@@ -261,15 +103,16 @@ const createKool = async (req, res) => {
       await user.updateOne({ $inc: { koolsCount: 1 } });
     }
 
+    // Populando os dados de mídia para a resposta
+    const populatedKool = await Kool.findById(newKool._id).populate('media');
+
     return res.status(201).json({
       message: parentKool ? "Resposta criada com sucesso" : "Kool criado com sucesso",
       kool: {
-        ...newKool.toObject(),
+        ...populatedKool.toObject(),
         author: userTransformer(user),
         parentKool: originalKool ?? undefined,
-        media: media.length > 0 ? media : undefined,
-      },
-      notificationOccurred,
+      }
     });
   } catch (error) {
     console.error("Erro ao criar Kool:", error);

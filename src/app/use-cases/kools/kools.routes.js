@@ -16,7 +16,7 @@ const getAllKools = require("./controllers/getAllKools")
 const trendingTags = require("./controllers/trendingTags")
 
 // configurando as rotas
-router.post("/", protectedRoute, upload.array("media", 4), createKool)
+router.post("/", protectedRoute, createKool)
 router.put("/:id", validObjectId, protectedRoute, editKool)
 router.put("/like/:id", validObjectId, protectedRoute, toggleLikeKool)
 router.delete("/:id", validObjectId, protectedRoute, deleteKool)
