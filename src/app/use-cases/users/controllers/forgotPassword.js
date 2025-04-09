@@ -35,8 +35,8 @@ const forgotPassword = async (req, res) => {
         // Aqui você pode adicionar o envio do e-mail com o token
 
         const title = "Redefinição de senha";
-        const message = "Use o código abaixo para redefinir sua senha na 1kole:";
-        const resetLink = `https://app.1kole.com/reset_password?token=${token}`;
+        const message = "Clique no link abaixo para redefinir sua senha na 1kole:";
+        const resetLink = `${process.env.CLIENT_URL}reset_password?token=${token}`;
 
         await sendMail(user.email, "reset_password", title, { resetLink:resetLink, title, message });
 

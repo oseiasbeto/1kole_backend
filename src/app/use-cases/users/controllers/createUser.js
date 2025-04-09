@@ -134,7 +134,7 @@ const createUser = async (req, res) => {
 
             // Se não for um login via rede social, envia um token de verificação para o e-mail
             if (!socialAuth) {
-                const verificationToken = randomUUID(); // Gera um token único para a verificação
+                const verificationToken = `${Date.now()}${Math.floor(Math.random() * 10000)}`; // Gera um token único para a verificação
                 user.verificationToken = verificationToken;
                 user.verificationTokenExpires = moment().add('1', 'h'); // O token expira em 1 hora
 
